@@ -324,3 +324,23 @@ curl --request GET 'http://127.0.0.1:8000/api/auth/me' \
   --header 'Authorization: Bearer TOKEN' \
   --header 'Accept: application/json'
 ```
+
+## API v1 Sanctum Setup Commands
+
+```bash
+composer require laravel/sanctum
+php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
+php artisan migrate
+```
+
+## Config changes
+
+```php
+// app/Http/Kernel.php (api middleware group)
+'api' => [
+    // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+    \Illuminate\Routing\Middleware\SubstituteBindings::class,
+],
+```
+
+Bearer token authentication works via `Authorization: Bearer <token>` using `auth:sanctum` middleware on protected routes.
