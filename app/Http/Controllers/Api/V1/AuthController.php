@@ -10,7 +10,6 @@ use App\Models\User;
 use App\Services\Auth\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -21,18 +20,10 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        try {
-            $result = $this->authService->login(
-                (string) $request->string('email'),
-                (string) $request->string('password')
-            );
-        } catch (ValidationException $exception) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Authentication failed.',
-                'errors' => $exception->errors(),
-            ], 422);
-        }
+        $result = $this->authService->login(
+            $request->string('email')->toString(),
+            $request->string('password')->toString()
+        );
 
         return response()->json([
             'success' => true,
