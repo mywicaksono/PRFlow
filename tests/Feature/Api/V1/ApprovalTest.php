@@ -225,7 +225,6 @@ class ApprovalTest extends TestCase
         $this->assertCount(2, $response->json('data.data'));
     }
 
-
     public function test_supervisor_approval_moves_request_to_manager(): void
     {
         $departmentId = $this->createDepartment('MultiA');
@@ -430,8 +429,7 @@ class ApprovalTest extends TestCase
         int $approverId,
         int $level = 1,
         ApprovalStatusEnum $status = ApprovalStatusEnum::PENDING
-    ): Approval
-    {
+    ): Approval {
         return Approval::query()->create([
             'request_id' => $requestId,
             'approver_id' => $approverId,

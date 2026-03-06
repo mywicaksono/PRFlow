@@ -108,12 +108,16 @@ class ApprovalActionService
 
     private function resolvePendingApproval(User $actor, PurchaseRequest $request): Approval
     {
-        $approval = Approval::query()
+        $approvalQuery = Approval::query()
             ->where('request_id', $request->id)
-            ->where('approver_id', $actor->id)
             ->where('status', ApprovalStatusEnum::PENDING)
-            ->where('level', $request->current_level)
-            ->first();
+            ->where('level', $request->current_level);
+
+        if ($actor->role !== UserRoleEnum::ADMIN) {
+            $approvalQuery->where('approver_id', $actor->id);
+        }
+
+        $approval = $approvalQuery->first();
 
         if ($approval === null) {
             throw new AuthorizationException('Unauthorized.');
