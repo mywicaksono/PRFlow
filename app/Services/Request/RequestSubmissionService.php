@@ -49,16 +49,18 @@ class RequestSubmissionService
                 ]);
             }
 
-            $supervisor = User::query()
+            $requiredRole = $this->resolveApprovalRoleByAmount((float) $request->amount);
+
+            $approver = User::query()
                 ->where('department_id', $request->department_id)
-                ->where('role', UserRoleEnum::SUPERVISOR->value)
+                ->where('role', $requiredRole->value)
                 ->where('is_active', true)
                 ->orderBy('id')
                 ->first();
 
-            if ($supervisor === null) {
+            if ($approver === null) {
                 throw ValidationException::withMessages([
-                    'approver' => ['No active supervisor found in the same department.'],
+                    'approver' => [sprintf('No active %s found in the same department.', $requiredRole->value)],
                 ]);
             }
 
@@ -71,7 +73,7 @@ class RequestSubmissionService
 
             Approval::query()->create([
                 'request_id' => $request->id,
-                'approver_id' => $supervisor->id,
+                'approver_id' => $approver->id,
                 'level' => 1,
                 'status' => ApprovalStatusEnum::PENDING,
                 'notes' => null,
@@ -80,5 +82,18 @@ class RequestSubmissionService
 
             return $request->fresh();
         });
+    }
+
+    private function resolveApprovalRoleByAmount(float $amount): UserRoleEnum
+    {
+        if ($amount < 5000000) {
+            return UserRoleEnum::SUPERVISOR;
+        }
+
+        if ($amount <= 20000000) {
+            return UserRoleEnum::MANAGER;
+        }
+
+        return UserRoleEnum::FINANCE;
     }
 }

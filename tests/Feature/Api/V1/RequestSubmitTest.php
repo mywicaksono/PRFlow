@@ -51,6 +51,69 @@ class RequestSubmitTest extends TestCase
         ]);
     }
 
+    public function test_submit_under_5000000_assigns_supervisor(): void
+    {
+        $departmentId = $this->createDepartment('Dept A');
+        $staff = $this->createStaff($departmentId, 'staff-amount1@example.com');
+        $supervisor = $this->createApprover($departmentId, UserRoleEnum::SUPERVISOR, 'supervisor-amount1@example.com');
+
+        $request = $this->createDraftRequest($staff->id, $departmentId, [
+            'amount' => 4999999,
+        ]);
+
+        Sanctum::actingAs($staff);
+
+        $this->postJson('/api/v1/requests/'.$request->id.'/submit')->assertOk();
+
+        $this->assertDatabaseHas('approvals', [
+            'request_id' => $request->id,
+            'approver_id' => $supervisor->id,
+            'status' => ApprovalStatusEnum::PENDING->value,
+        ]);
+    }
+
+    public function test_submit_5000000_to_20000000_assigns_manager(): void
+    {
+        $departmentId = $this->createDepartment('Dept B');
+        $staff = $this->createStaff($departmentId, 'staff-amount2@example.com');
+        $manager = $this->createApprover($departmentId, UserRoleEnum::MANAGER, 'manager-amount2@example.com');
+
+        $request = $this->createDraftRequest($staff->id, $departmentId, [
+            'amount' => 5000000,
+        ]);
+
+        Sanctum::actingAs($staff);
+
+        $this->postJson('/api/v1/requests/'.$request->id.'/submit')->assertOk();
+
+        $this->assertDatabaseHas('approvals', [
+            'request_id' => $request->id,
+            'approver_id' => $manager->id,
+            'status' => ApprovalStatusEnum::PENDING->value,
+        ]);
+    }
+
+    public function test_submit_above_20000000_assigns_finance(): void
+    {
+        $departmentId = $this->createDepartment('Dept C');
+        $staff = $this->createStaff($departmentId, 'staff-amount3@example.com');
+        $finance = $this->createApprover($departmentId, UserRoleEnum::FINANCE, 'finance-amount3@example.com');
+
+        $request = $this->createDraftRequest($staff->id, $departmentId, [
+            'amount' => 20000001,
+        ]);
+
+        Sanctum::actingAs($staff);
+
+        $this->postJson('/api/v1/requests/'.$request->id.'/submit')->assertOk();
+
+        $this->assertDatabaseHas('approvals', [
+            'request_id' => $request->id,
+            'approver_id' => $finance->id,
+            'status' => ApprovalStatusEnum::PENDING->value,
+        ]);
+    }
+
     public function test_request_status_changes_to_submitted(): void
     {
         $departmentId = $this->createDepartment('Ops');
@@ -236,7 +299,7 @@ class RequestSubmitTest extends TestCase
             ->assertJsonPath('errors.status.0', 'Only draft request can be submitted.');
     }
 
-    public function test_request_cannot_be_submitted_if_no_supervisor_exists_in_same_department(): void
+    public function test_request_cannot_be_submitted_if_required_approver_does_not_exist(): void
     {
         $departmentId = $this->createDepartment('Warehouse');
 
@@ -245,14 +308,16 @@ class RequestSubmitTest extends TestCase
             'role' => UserRoleEnum::STAFF,
         ]);
 
-        $request = $this->createDraftRequest($staff->id, $departmentId);
+        $request = $this->createDraftRequest($staff->id, $departmentId, [
+            'amount' => 6000000,
+        ]);
 
         Sanctum::actingAs($staff);
 
         $this->postJson('/api/v1/requests/'.$request->id.'/submit')
             ->assertStatus(422)
             ->assertJsonPath('success', false)
-            ->assertJsonPath('errors.approver.0', 'No active supervisor found in the same department.');
+            ->assertJsonPath('errors.approver.0', 'No active manager found in the same department.');
 
         $this->assertDatabaseMissing('approvals', [
             'request_id' => $request->id,
@@ -271,6 +336,26 @@ class RequestSubmitTest extends TestCase
             'name' => $name,
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+    }
+
+    private function createStaff(int $departmentId, string $email): User
+    {
+        return User::factory()->create([
+            'department_id' => $departmentId,
+            'role' => UserRoleEnum::STAFF,
+            'email' => $email,
+            'is_active' => true,
+        ]);
+    }
+
+    private function createApprover(int $departmentId, UserRoleEnum $role, string $email): User
+    {
+        return User::factory()->create([
+            'department_id' => $departmentId,
+            'role' => $role,
+            'email' => $email,
+            'is_active' => true,
         ]);
     }
 
