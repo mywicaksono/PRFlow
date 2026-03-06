@@ -65,7 +65,6 @@ class RequestService
         return $request;
     }
 
-
     /**
      * @return array<string, mixed>
      */
