@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\RequestController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -39,5 +40,11 @@ Route::prefix('v1')->group(function (): void {
             'success' => true,
             'message' => 'Staff access granted.',
         ]));
+    });
+
+    Route::prefix('requests')->middleware('auth:sanctum')->group(function (): void {
+        Route::post('/', [RequestController::class, 'store'])->middleware('role:staff,admin');
+        Route::get('/', [RequestController::class, 'index']);
+        Route::get('/{id}', [RequestController::class, 'show']);
     });
 });
