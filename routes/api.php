@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AuthController;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -13,5 +15,29 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/logout', [AuthController::class, 'logout']);
             Route::get('/me', [AuthController::class, 'me']);
         });
+    });
+
+    Route::middleware(['auth:sanctum', 'role:admin'])->group(function (): void {
+        Route::get('/admin/test', static fn (): JsonResponse => response()->json([
+            'success' => true,
+            'message' => 'Admin access granted.',
+        ]));
+    });
+
+    Route::middleware(['auth:sanctum', 'role:supervisor,manager,finance'])->group(function (): void {
+        Route::get('/approver/test', static fn (Request $request): JsonResponse => response()->json([
+            'success' => true,
+            'message' => 'Approver access granted.',
+            'data' => [
+                'role' => $request->user()?->role?->value,
+            ],
+        ]));
+    });
+
+    Route::middleware(['auth:sanctum', 'role:staff'])->group(function (): void {
+        Route::get('/staff/test', static fn (): JsonResponse => response()->json([
+            'success' => true,
+            'message' => 'Staff access granted.',
+        ]));
     });
 });
