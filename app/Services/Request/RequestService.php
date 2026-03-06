@@ -8,6 +8,7 @@ use App\Enums\RequestStatusEnum;
 use App\Enums\UserRoleEnum;
 use App\Models\Request as PurchaseRequest;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -62,6 +63,43 @@ class RequestService
         }
 
         return $request;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function historyForUser(User $user, PurchaseRequest $request): array
+    {
+        $request->load([
+            'approvals' => static fn ($query) => $query
+                ->with('approver')
+                ->orderBy('level')
+                ->orderBy('created_at'),
+        ]);
+
+        $isOwner = $request->user_id === $user->id;
+        $isAdmin = $user->role === UserRoleEnum::ADMIN;
+        $isAssignedApprover = $request->approvals->contains(
+            static fn ($approval): bool => $approval->approver_id === $user->id
+        );
+
+        if (! $isOwner && ! $isAdmin && ! $isAssignedApprover) {
+            throw new AuthorizationException('Unauthorized.');
+        }
+
+        return [
+            'request_id' => $request->id,
+            'request_number' => $request->request_number,
+            'status' => $request->status->value,
+            'history' => $request->approvals->map(static fn ($approval): array => [
+                'level' => $approval->level,
+                'approver_id' => $approval->approver_id,
+                'approver_role' => $approval->approver?->role?->value,
+                'status' => $approval->status->value,
+                'notes' => $approval->notes,
+                'approved_at' => $approval->approved_at?->toISOString(),
+            ])->values()->all(),
+        ];
     }
 
     private function generateRequestNumber(): string

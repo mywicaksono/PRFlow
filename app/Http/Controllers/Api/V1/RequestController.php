@@ -100,4 +100,27 @@ class RequestController extends Controller
             'data' => $submittedRequest,
         ]);
     }
+
+    public function history(Request $request, int $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $purchaseRequest = PurchaseRequest::query()->findOrFail($id);
+
+        try {
+            $history = $this->requestService->historyForUser($user, $purchaseRequest);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request history fetched successfully.',
+            'data' => $history,
+        ]);
+    }
 }
