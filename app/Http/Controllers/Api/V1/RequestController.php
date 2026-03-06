@@ -1,0 +1,71 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Request\StoreRequestRequest;
+use App\Models\Request as PurchaseRequest;
+use App\Models\User;
+use App\Services\Request\RequestService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+
+class RequestController extends Controller
+{
+    public function __construct(
+        private readonly RequestService $requestService
+    ) {
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Requests fetched successfully.',
+            'data' => $this->requestService->listForUser($user),
+        ]);
+    }
+
+    public function store(StoreRequestRequest $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        try {
+            $createdRequest = $this->requestService->createDraft($user, $request->validated());
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request created successfully.',
+            'data' => $createdRequest,
+        ], 201);
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $purchaseRequest = PurchaseRequest::query()->findOrFail($id);
+        $purchaseRequest = $this->requestService->showForUser($user, $purchaseRequest);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request fetched successfully.',
+            'data' => $purchaseRequest,
+        ]);
+    }
+}
