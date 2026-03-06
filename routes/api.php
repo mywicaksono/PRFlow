@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\RequestController;
 use Illuminate\Http\JsonResponse;
@@ -48,4 +49,12 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/{id}', [RequestController::class, 'show']);
         Route::post('/{id}/submit', [RequestController::class, 'submit'])->middleware('role:staff,admin');
     });
+
+    Route::prefix('approvals')
+        ->middleware(['auth:sanctum', 'role:supervisor,manager,finance,admin'])
+        ->group(function (): void {
+            Route::get('/pending', [ApprovalController::class, 'pending']);
+            Route::post('/{request}/approve', [ApprovalController::class, 'approve']);
+            Route::post('/{request}/reject', [ApprovalController::class, 'reject']);
+        });
 });
