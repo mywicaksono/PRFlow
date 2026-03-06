@@ -114,8 +114,9 @@ class ApprovalTest extends TestCase
             'id' => $request->id,
             'status' => RequestStatusEnum::APPROVED->value,
             'current_level' => 1,
-            'completed_at' => null,
         ]);
+
+        $this->assertNotNull(PurchaseRequest::query()->findOrFail($request->id)->completed_at);
     }
 
     public function test_request_status_becomes_rejected_after_reject(): void
@@ -137,6 +138,8 @@ class ApprovalTest extends TestCase
             'id' => $request->id,
             'status' => RequestStatusEnum::REJECTED->value,
         ]);
+
+        $this->assertNotNull(PurchaseRequest::query()->findOrFail($request->id)->completed_at);
     }
 
     public function test_non_assigned_approver_cannot_approve_request(): void

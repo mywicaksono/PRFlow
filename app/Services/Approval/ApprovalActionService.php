@@ -51,8 +51,8 @@ class ApprovalActionService
 
             $request->update([
                 'status' => RequestStatusEnum::APPROVED,
-                'current_level' => 1,
-                'completed_at' => null,
+                'current_level' => $approval->level,
+                'completed_at' => now(),
             ]);
 
             return $request->fresh(['approvals']);
@@ -80,6 +80,8 @@ class ApprovalActionService
 
             $request->update([
                 'status' => RequestStatusEnum::REJECTED,
+                'current_level' => $approval->level,
+                'completed_at' => now(),
             ]);
 
             return $request->fresh(['approvals']);

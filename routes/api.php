@@ -54,7 +54,7 @@ Route::prefix('v1')->group(function (): void {
         ->middleware(['auth:sanctum', 'role:supervisor,manager,finance,admin'])
         ->group(function (): void {
             Route::get('/pending', [ApprovalController::class, 'pending']);
-            Route::post('/{request}/approve', [ApprovalController::class, 'approve']);
-            Route::post('/{request}/reject', [ApprovalController::class, 'reject']);
+            Route::post('/{purchaseRequest}/approve', [ApprovalController::class, 'approve']);
+            Route::post('/{purchaseRequest}/reject', [ApprovalController::class, 'reject']);
         });
 });

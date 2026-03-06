@@ -33,13 +33,13 @@ class ApprovalController extends Controller
         ]);
     }
 
-    public function approve(Request $request, PurchaseRequest $requestModel): JsonResponse
+    public function approve(Request $request, PurchaseRequest $purchaseRequest): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
 
         try {
-            $updated = $this->approvalActionService->approve($user, $requestModel);
+            $updated = $this->approvalActionService->approve($user, $purchaseRequest);
         } catch (AuthorizationException $exception) {
             return response()->json([
                 'success' => false,
@@ -60,7 +60,7 @@ class ApprovalController extends Controller
         ]);
     }
 
-    public function reject(RejectApprovalRequest $request, PurchaseRequest $requestModel): JsonResponse
+    public function reject(RejectApprovalRequest $request, PurchaseRequest $purchaseRequest): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -68,7 +68,7 @@ class ApprovalController extends Controller
         try {
             $updated = $this->approvalActionService->reject(
                 $user,
-                $requestModel,
+                $purchaseRequest,
                 $request->string('reason')->toString()
             );
         } catch (AuthorizationException $exception) {
