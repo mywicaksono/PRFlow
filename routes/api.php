@@ -46,5 +46,6 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/', [RequestController::class, 'store'])->middleware('role:staff,admin');
         Route::get('/', [RequestController::class, 'index']);
         Route::get('/{id}', [RequestController::class, 'show']);
+        Route::post('/{id}/submit', [RequestController::class, 'submit'])->middleware('role:staff,admin');
     });
 });
