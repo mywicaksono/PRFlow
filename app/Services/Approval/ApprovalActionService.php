@@ -22,7 +22,10 @@ class ApprovalActionService
         $approvalQuery = Approval::query()
             ->with(['request', 'request.user'])
             ->where('status', ApprovalStatusEnum::PENDING)
-            ->whereHas('request', static fn ($query) => $query->where('status', RequestStatusEnum::SUBMITTED));
+            ->whereHas('request', static function ($query): void {
+                $query->where('status', RequestStatusEnum::SUBMITTED)
+                    ->whereColumn('approvals.level', 'requests.current_level');
+            });
 
         if ($user->role !== UserRoleEnum::ADMIN) {
             $approvalQuery->where('approver_id', $user->id);
@@ -49,11 +52,26 @@ class ApprovalActionService
                 'approved_at' => now(),
             ]);
 
-            $request->update([
-                'status' => RequestStatusEnum::APPROVED,
-                'current_level' => $approval->level,
-                'completed_at' => now(),
-            ]);
+            $nextPendingApproval = Approval::query()
+                ->where('request_id', $request->id)
+                ->where('status', ApprovalStatusEnum::PENDING)
+                ->where('level', '>', $approval->level)
+                ->orderBy('level')
+                ->first();
+
+            if ($nextPendingApproval !== null) {
+                $request->update([
+                    'status' => RequestStatusEnum::SUBMITTED,
+                    'current_level' => $nextPendingApproval->level,
+                    'completed_at' => null,
+                ]);
+            } else {
+                $request->update([
+                    'status' => RequestStatusEnum::APPROVED,
+                    'current_level' => $approval->level,
+                    'completed_at' => now(),
+                ]);
+            }
 
             return $request->fresh(['approvals']);
         });
@@ -90,19 +108,16 @@ class ApprovalActionService
 
     private function resolvePendingApproval(User $actor, PurchaseRequest $request): Approval
     {
-        if ($actor->role === UserRoleEnum::ADMIN) {
-            $approval = Approval::query()
-                ->where('request_id', $request->id)
-                ->where('status', ApprovalStatusEnum::PENDING)
-                ->orderBy('id')
-                ->first();
-        } else {
-            $approval = Approval::query()
-                ->where('request_id', $request->id)
-                ->where('approver_id', $actor->id)
-                ->where('status', ApprovalStatusEnum::PENDING)
-                ->first();
+        $approvalQuery = Approval::query()
+            ->where('request_id', $request->id)
+            ->where('status', ApprovalStatusEnum::PENDING)
+            ->where('level', $request->current_level);
+
+        if ($actor->role !== UserRoleEnum::ADMIN) {
+            $approvalQuery->where('approver_id', $actor->id);
         }
+
+        $approval = $approvalQuery->first();
 
         if ($approval === null) {
             throw new AuthorizationException('Unauthorized.');
@@ -110,6 +125,4 @@ class ApprovalActionService
 
         return $approval;
     }
-
 }
-

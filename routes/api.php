@@ -58,4 +58,5 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/{purchaseRequest}/approve', [ApprovalController::class, 'approve']);
             Route::post('/{purchaseRequest}/reject', [ApprovalController::class, 'reject']);
         });
+
 });

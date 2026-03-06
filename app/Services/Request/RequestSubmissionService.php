@@ -49,20 +49,24 @@ class RequestSubmissionService
                 ]);
             }
 
-            $requiredRole = $this->resolveApprovalRoleByAmount((float) $request->amount);
+            $approvalRoles = $this->resolveApprovalRolesByAmount((float) $request->amount);
 
-            $approver = User::query()
-                ->where('department_id', $request->department_id)
-                ->where('role', $requiredRole->value)
-                ->where('is_active', true)
-                ->orderBy('id')
-                ->first();
+            $approvers = collect($approvalRoles)->map(function (UserRoleEnum $role) use ($request): User {
+                $approver = User::query()
+                    ->where('department_id', $request->department_id)
+                    ->where('role', $role->value)
+                    ->where('is_active', true)
+                    ->orderBy('id')
+                    ->first();
 
-            if ($approver === null) {
-                throw ValidationException::withMessages([
-                    'approver' => [sprintf('No active %s found in the same department.', $requiredRole->value)],
-                ]);
-            }
+                if ($approver === null) {
+                    throw ValidationException::withMessages([
+                        'approver' => [sprintf('No active %s found in the same department.', $role->value)],
+                    ]);
+                }
+
+                return $approver;
+            });
 
             $request->update([
                 'status' => RequestStatusEnum::SUBMITTED,
@@ -71,29 +75,34 @@ class RequestSubmissionService
                 'completed_at' => null,
             ]);
 
-            Approval::query()->create([
-                'request_id' => $request->id,
-                'approver_id' => $approver->id,
-                'level' => 1,
-                'status' => ApprovalStatusEnum::PENDING,
-                'notes' => null,
-                'approved_at' => null,
-            ]);
+            foreach ($approvers as $index => $approver) {
+                Approval::query()->create([
+                    'request_id' => $request->id,
+                    'approver_id' => $approver->id,
+                    'level' => $index + 1,
+                    'status' => ApprovalStatusEnum::PENDING,
+                    'notes' => null,
+                    'approved_at' => null,
+                ]);
+            }
 
             return $request->fresh();
         });
     }
 
-    private function resolveApprovalRoleByAmount(float $amount): UserRoleEnum
+    /**
+     * @return array<int, UserRoleEnum>
+     */
+    private function resolveApprovalRolesByAmount(float $amount): array
     {
         if ($amount < 5000000) {
-            return UserRoleEnum::SUPERVISOR;
+            return [UserRoleEnum::SUPERVISOR];
         }
 
         if ($amount <= 20000000) {
-            return UserRoleEnum::MANAGER;
+            return [UserRoleEnum::SUPERVISOR, UserRoleEnum::MANAGER];
         }
 
-        return UserRoleEnum::FINANCE;
+        return [UserRoleEnum::SUPERVISOR, UserRoleEnum::MANAGER, UserRoleEnum::FINANCE];
     }
 }

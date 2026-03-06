@@ -76,6 +76,7 @@ class RequestSubmitTest extends TestCase
     {
         $departmentId = $this->createDepartment('Dept B');
         $staff = $this->createStaff($departmentId, 'staff-amount2@example.com');
+        $supervisor = $this->createApprover($departmentId, UserRoleEnum::SUPERVISOR, 'supervisor-amount2@example.com');
         $manager = $this->createApprover($departmentId, UserRoleEnum::MANAGER, 'manager-amount2@example.com');
 
         $request = $this->createDraftRequest($staff->id, $departmentId, [
@@ -88,7 +89,15 @@ class RequestSubmitTest extends TestCase
 
         $this->assertDatabaseHas('approvals', [
             'request_id' => $request->id,
+            'approver_id' => $supervisor->id,
+            'level' => 1,
+            'status' => ApprovalStatusEnum::PENDING->value,
+        ]);
+
+        $this->assertDatabaseHas('approvals', [
+            'request_id' => $request->id,
             'approver_id' => $manager->id,
+            'level' => 2,
             'status' => ApprovalStatusEnum::PENDING->value,
         ]);
     }
@@ -97,6 +106,8 @@ class RequestSubmitTest extends TestCase
     {
         $departmentId = $this->createDepartment('Dept C');
         $staff = $this->createStaff($departmentId, 'staff-amount3@example.com');
+        $supervisor = $this->createApprover($departmentId, UserRoleEnum::SUPERVISOR, 'supervisor-amount3@example.com');
+        $manager = $this->createApprover($departmentId, UserRoleEnum::MANAGER, 'manager-amount3@example.com');
         $finance = $this->createApprover($departmentId, UserRoleEnum::FINANCE, 'finance-amount3@example.com');
 
         $request = $this->createDraftRequest($staff->id, $departmentId, [
@@ -109,7 +120,22 @@ class RequestSubmitTest extends TestCase
 
         $this->assertDatabaseHas('approvals', [
             'request_id' => $request->id,
+            'approver_id' => $supervisor->id,
+            'level' => 1,
+            'status' => ApprovalStatusEnum::PENDING->value,
+        ]);
+
+        $this->assertDatabaseHas('approvals', [
+            'request_id' => $request->id,
+            'approver_id' => $manager->id,
+            'level' => 2,
+            'status' => ApprovalStatusEnum::PENDING->value,
+        ]);
+
+        $this->assertDatabaseHas('approvals', [
+            'request_id' => $request->id,
             'approver_id' => $finance->id,
+            'level' => 3,
             'status' => ApprovalStatusEnum::PENDING->value,
         ]);
     }
@@ -307,6 +333,8 @@ class RequestSubmitTest extends TestCase
             'department_id' => $departmentId,
             'role' => UserRoleEnum::STAFF,
         ]);
+
+        $this->createApprover($departmentId, UserRoleEnum::SUPERVISOR, 'supervisor-missing-manager@example.com');
 
         $request = $this->createDraftRequest($staff->id, $departmentId, [
             'amount' => 6000000,
