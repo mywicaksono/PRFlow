@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\RequestController;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -14,4 +18,45 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/me', [AuthController::class, 'me']);
         });
     });
+
+    Route::middleware(['auth:sanctum', 'role:admin'])->group(function (): void {
+        Route::get('/admin/test', static fn (): JsonResponse => response()->json([
+            'success' => true,
+            'message' => 'Admin access granted.',
+        ]));
+    });
+
+    Route::middleware(['auth:sanctum', 'role:supervisor,manager,finance'])->group(function (): void {
+        Route::get('/approver/test', static fn (Request $request): JsonResponse => response()->json([
+            'success' => true,
+            'message' => 'Approver access granted.',
+            'data' => [
+                'role' => $request->user()?->role?->value,
+            ],
+        ]));
+    });
+
+    Route::middleware(['auth:sanctum', 'role:staff'])->group(function (): void {
+        Route::get('/staff/test', static fn (): JsonResponse => response()->json([
+            'success' => true,
+            'message' => 'Staff access granted.',
+        ]));
+    });
+
+    Route::prefix('requests')->middleware('auth:sanctum')->group(function (): void {
+        Route::post('/', [RequestController::class, 'store'])->middleware('role:staff,admin');
+        Route::get('/', [RequestController::class, 'index']);
+        Route::get('/{id}', [RequestController::class, 'show']);
+        Route::get('/{id}/history', [RequestController::class, 'history']);
+        Route::get('/{id}/activities', [RequestController::class, 'activities']);
+        Route::post('/{id}/submit', [RequestController::class, 'submit'])->middleware('role:staff,admin');
+    });
+
+    Route::prefix('approvals')
+        ->middleware(['auth:sanctum', 'role:supervisor,manager,finance,admin'])
+        ->group(function (): void {
+            Route::get('/pending', [ApprovalController::class, 'pending']);
+            Route::post('/{purchaseRequest}/approve', [ApprovalController::class, 'approve']);
+            Route::post('/{purchaseRequest}/reject', [ApprovalController::class, 'reject']);
+        });
 });
