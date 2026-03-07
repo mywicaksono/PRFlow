@@ -41,6 +41,30 @@ class AuthTest extends TestCase
             ]);
     }
 
+
+    public function test_invalid_login_credentials_return_standard_error_envelope(): void
+    {
+        User::query()->create([
+            'name' => 'Test User',
+            'email' => 'user@example.com',
+            'password' => Hash::make('password123'),
+            'role' => UserRoleEnum::STAFF,
+            'is_active' => true,
+        ]);
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'user@example.com',
+            'password' => 'wrong-password',
+        ])->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Validation failed.')
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'errors',
+            ]);
+    }
+
     public function test_me_requires_auth(): void
     {
         $this->getJson('/api/v1/auth/me')
