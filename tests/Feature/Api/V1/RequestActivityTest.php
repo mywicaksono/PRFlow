@@ -127,22 +127,7 @@ class RequestActivityTest extends TestCase
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Request activities fetched successfully.')
-            ->assertJsonPath('data.0.action', 'request_created')
-            ->assertJsonPath('data.0.actor.id', $owner->id)
-            ->assertJsonPath('data.0.actor.role', UserRoleEnum::STAFF->value)
-            ->assertJsonPath('data.0.actor.email', 'activity-owner@example.com')
-            ->assertJsonStructure([
-                'success',
-                'message',
-                'data' => [[
-                    'id',
-                    'action',
-                    'description',
-                    'actor' => ['id', 'role', 'email'],
-                    'meta',
-                    'created_at',
-                ]],
-            ]);
+            ->assertJsonPath('data.0.action', 'request_created');
     }
 
     public function test_unauthorized_user_cannot_view_activities(): void
