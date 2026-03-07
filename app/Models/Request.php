@@ -46,7 +46,6 @@ class Request extends Model
 
     public function activities(): HasMany
     {
-        return $this->hasMany(RequestActivity::class)
-            ->orderBy('created_at');
+        return $this->hasMany(RequestActivity::class);
     }
 }
