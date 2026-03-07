@@ -115,20 +115,6 @@ Base URL: `/api/v1`
 - Roles: authenticated
 - Staff: own requests only
 - Admin: all requests
-- Query params (optional filters):
-  - `status`
-  - `department_id`
-  - `min_amount`
-  - `max_amount`
-  - `date_from` (YYYY-MM-DD)
-  - `date_to` (YYYY-MM-DD)
-  - `search` (request_number or description)
-- Sorting:
-  - `sort_by`: `created_at` | `amount` | `status`
-  - `sort_direction`: `asc` | `desc`
-  - default: `created_at desc`
-- Example:
-  - `/api/v1/requests?status=submitted&min_amount=1000000&max_amount=5000000&search=PRF-2026&sort_by=amount&sort_direction=asc`
 
 ### GET `/requests/{id}`
 - Auth: `auth:sanctum`
@@ -186,32 +172,6 @@ Base URL: `/api/v1`
 - Auth: `auth:sanctum`
 - Roles: owner, assigned approver, admin
 - Returns structured activity timeline (action, actor, meta, timestamp)
-
----
-
-
-## Request Comments
-
-### GET `/requests/{id}/comments`
-- Auth: `auth:sanctum`
-- Roles: owner, assigned approver, admin
-- Returns comments ordered by `created_at` ascending
-
-### POST `/requests/{id}/comments`
-- Auth: `auth:sanctum`
-- Roles: owner, assigned approver, admin
-- Payload:
-
-```json
-{
-  "comment": "Please attach quotation for this item."
-}
-```
-
-- Validation: `comment` required, string, max 1000
-- Side effects:
-  - create activity `request_comment_added`
-  - notify request owner and current approver (excluding comment author)
 
 ---
 
@@ -314,9 +274,3 @@ Base URL: `/api/v1`
 - Intermediate approval: notify next approver
 - Final approval: notify request owner
 - Reject: notify request owner
-
-
-### Comment behavior
-- Comment can be added by request owner, assigned approver, or admin
-- On comment creation, activity log `request_comment_added` is created
-- Notification recipients: request owner and current approver, excluding comment author

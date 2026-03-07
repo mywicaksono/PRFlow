@@ -133,8 +133,3 @@ sesuai akun MySQL Laragon yang aktif.
 Biasanya berarti folder project bukan root Laravel yang benar, atau file `artisan` belum ada di direktori saat ini.
 
 Pastikan jalankan perintah dari root repository PRFlow.
-
-
-## Dokumentasi API
-
-Dokumentasi endpoint API v1 tersedia di `docs/api.md`.
