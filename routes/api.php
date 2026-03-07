@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\RequestController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,10 +60,5 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/{purchaseRequest}/reject', [ApprovalController::class, 'reject']);
         });
 
-
-    Route::prefix('notifications')->middleware('auth:sanctum')->group(function (): void {
-        Route::get('/', [NotificationController::class, 'index']);
-        Route::post('/{id}/read', [NotificationController::class, 'read']);
-    });
-
 });
+
