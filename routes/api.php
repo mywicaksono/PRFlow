@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\ApprovalController;
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\DashboardController;
-use App\Http\Controllers\Api\V1\NotificationController;
-use App\Http\Controllers\Api\V1\RequestAttachmentController;
 use App\Http\Controllers\Api\V1\RequestController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -53,8 +50,6 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/{id}/history', [RequestController::class, 'history']);
         Route::get('/{id}/activities', [RequestController::class, 'activities']);
         Route::post('/{id}/submit', [RequestController::class, 'submit'])->middleware('role:staff,admin');
-        Route::get('/{id}/attachments', [RequestAttachmentController::class, 'index']);
-        Route::post('/{id}/attachments', [RequestAttachmentController::class, 'store'])->middleware('role:staff,admin');
     });
 
     Route::prefix('approvals')
@@ -65,21 +60,5 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/{purchaseRequest}/reject', [ApprovalController::class, 'reject']);
         });
 
-
-    Route::prefix('attachments')->middleware('auth:sanctum')->group(function (): void {
-        Route::delete('/{id}', [RequestAttachmentController::class, 'destroy'])->middleware('role:staff,admin');
-    });
-
-
-    Route::prefix('dashboard')->middleware('auth:sanctum')->group(function (): void {
-        Route::get('/summary', [DashboardController::class, 'summary']);
-        Route::get('/recent-requests', [DashboardController::class, 'recentRequests']);
-        Route::get('/recent-notifications', [DashboardController::class, 'recentNotifications']);
-    });
-
-    Route::prefix('notifications')->middleware('auth:sanctum')->group(function (): void {
-        Route::get('/', [NotificationController::class, 'index']);
-        Route::post('/{id}/read', [NotificationController::class, 'read']);
-    });
-
 });
+

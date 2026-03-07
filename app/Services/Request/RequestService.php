@@ -124,13 +124,10 @@ class RequestService
 
         return $request->activities->map(static fn ($activity): array => [
             'id' => $activity->id,
+            'request_id' => $activity->request_id,
+            'actor_id' => $activity->actor_id,
             'action' => $activity->action,
             'description' => $activity->description,
-            'actor' => [
-                'id' => $activity->actor?->id,
-                'role' => $activity->actor?->role?->value,
-                'email' => $activity->actor?->email,
-            ],
             'meta' => $activity->meta,
             'created_at' => $activity->created_at?->toISOString(),
         ])->values()->all();
