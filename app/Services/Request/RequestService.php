@@ -11,7 +11,6 @@ use App\Models\RequestActivity;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -54,19 +53,13 @@ class RequestService
         });
     }
 
-    /**
-     * @param  array<string, mixed>  $filters
-     */
-    public function listForUser(User $user, array $filters = []): LengthAwarePaginator
+    public function listForUser(User $user): LengthAwarePaginator
     {
-        $query = PurchaseRequest::query();
+        $query = PurchaseRequest::query()->latest('id');
 
         if ($user->role !== UserRoleEnum::ADMIN) {
             $query->where('user_id', $user->id);
         }
-
-        $this->applyFilters($query, $filters);
-        $this->applySorting($query, $filters);
 
         return $query->paginate(15);
     }
@@ -74,7 +67,10 @@ class RequestService
     public function showForUser(User $user, PurchaseRequest $request): PurchaseRequest
     {
         if (! $this->canAccessRequest($user, $request)) {
-            throw new AuthorizationException('Unauthorized.');
+            abort(response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403));
         }
 
         return $request;
@@ -128,66 +124,13 @@ class RequestService
 
         return $request->activities->map(static fn ($activity): array => [
             'id' => $activity->id,
+            'request_id' => $activity->request_id,
+            'actor_id' => $activity->actor_id,
             'action' => $activity->action,
             'description' => $activity->description,
-            'actor' => [
-                'id' => $activity->actor?->id,
-                'role' => $activity->actor?->role?->value,
-                'email' => $activity->actor?->email,
-            ],
             'meta' => $activity->meta,
             'created_at' => $activity->created_at?->toISOString(),
         ])->values()->all();
-    }
-
-    /**
-     * @param  array<string, mixed>  $filters
-     */
-    private function applyFilters(Builder $query, array $filters): void
-    {
-        if (isset($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (isset($filters['department_id'])) {
-            $query->where('department_id', $filters['department_id']);
-        }
-
-        if (isset($filters['min_amount'])) {
-            $query->where('amount', '>=', $filters['min_amount']);
-        }
-
-        if (isset($filters['max_amount'])) {
-            $query->where('amount', '<=', $filters['max_amount']);
-        }
-
-        if (isset($filters['date_from'])) {
-            $query->whereDate('created_at', '>=', $filters['date_from']);
-        }
-
-        if (isset($filters['date_to'])) {
-            $query->whereDate('created_at', '<=', $filters['date_to']);
-        }
-
-        if (isset($filters['search'])) {
-            $search = trim((string) $filters['search']);
-            $query->where(static function (Builder $builder) use ($search): void {
-                $builder->where('request_number', 'like', '%'.$search.'%')
-                    ->orWhere('description', 'like', '%'.$search.'%');
-            });
-        }
-    }
-
-    /**
-     * @param  array<string, mixed>  $filters
-     */
-    private function applySorting(Builder $query, array $filters): void
-    {
-        $sortBy = $filters['sort_by'] ?? 'created_at';
-        $sortDirection = $filters['sort_direction'] ?? 'desc';
-
-        $query->orderBy((string) $sortBy, (string) $sortDirection)
-            ->orderBy('id', 'desc');
     }
 
     private function canAccessRequest(User $user, PurchaseRequest $request): bool

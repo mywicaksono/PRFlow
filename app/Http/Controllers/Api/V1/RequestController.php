@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\V1\Request\ListRequestRequest;
 use App\Http\Requests\Api\V1\Request\StoreRequestRequest;
 use App\Models\Request as PurchaseRequest;
 use App\Models\User;
 use App\Services\Request\RequestService;
 use App\Services\Request\RequestSubmissionService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class RequestController extends Controller
 {
@@ -22,7 +23,7 @@ class RequestController extends Controller
     ) {
     }
 
-    public function index(ListRequestRequest $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -30,7 +31,7 @@ class RequestController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Requests fetched successfully.',
-            'data' => $this->requestService->listForUser($user, $request->validated()),
+            'data' => $this->requestService->listForUser($user),
         ]);
     }
 
@@ -39,7 +40,15 @@ class RequestController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $createdRequest = $this->requestService->createDraft($user, $request->validated());
+        try {
+            $createdRequest = $this->requestService->createDraft($user, $request->validated());
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -70,7 +79,20 @@ class RequestController extends Controller
 
         $purchaseRequest = PurchaseRequest::query()->findOrFail($id);
 
-        $submittedRequest = $this->requestSubmissionService->submit($user, $purchaseRequest);
+        try {
+            $submittedRequest = $this->requestSubmissionService->submit($user, $purchaseRequest);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -86,7 +108,14 @@ class RequestController extends Controller
 
         $purchaseRequest = PurchaseRequest::query()->findOrFail($id);
 
-        $history = $this->requestService->historyForUser($user, $purchaseRequest);
+        try {
+            $history = $this->requestService->historyForUser($user, $purchaseRequest);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,
@@ -102,7 +131,14 @@ class RequestController extends Controller
 
         $purchaseRequest = PurchaseRequest::query()->findOrFail($id);
 
-        $activities = $this->requestService->activitiesForUser($user, $purchaseRequest);
+        try {
+            $activities = $this->requestService->activitiesForUser($user, $purchaseRequest);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,

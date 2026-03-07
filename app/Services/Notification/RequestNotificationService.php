@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Notification;
 
-use App\Enums\ApprovalStatusEnum;
 use App\Enums\RequestStatusEnum;
 use App\Models\Request as PurchaseRequest;
 use App\Models\RequestNotification;
@@ -104,42 +103,6 @@ class RequestNotificationService
                 'reason' => $reason,
             ],
         ]);
-    }
-
-
-    public function notifyCommentAdded(PurchaseRequest $request, User $actor, int $commentId): void
-    {
-        $request->loadMissing('approvals');
-
-        $recipientIds = collect([$request->user_id]);
-
-        $currentApproval = $request->approvals
-            ->where('level', $request->current_level)
-            ->where('status', ApprovalStatusEnum::PENDING)
-            ->first();
-
-        if ($currentApproval !== null) {
-            $recipientIds->push($currentApproval->approver_id);
-        }
-
-        $recipientIds
-            ->unique()
-            ->filter(static fn (int $userId): bool => $userId !== $actor->id)
-            ->each(function (int $userId) use ($request, $actor, $commentId): void {
-                RequestNotification::query()->create([
-                    'request_id' => $request->id,
-                    'user_id' => $userId,
-                    'type' => 'request_commented',
-                    'title' => 'New request comment',
-                    'message' => sprintf('New comment added to request %s.', $request->request_number),
-                    'is_read' => false,
-                    'read_at' => null,
-                    'meta' => [
-                        'comment_id' => $commentId,
-                        'commented_by' => $actor->id,
-                    ],
-                ]);
-            });
     }
 
     public function listForUser(User $user): LengthAwarePaginator
