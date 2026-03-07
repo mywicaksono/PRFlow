@@ -48,6 +48,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/', [RequestController::class, 'index']);
         Route::get('/{id}', [RequestController::class, 'show']);
         Route::get('/{id}/history', [RequestController::class, 'history']);
+        Route::get('/{id}/activities', [RequestController::class, 'activities']);
         Route::post('/{id}/submit', [RequestController::class, 'submit'])->middleware('role:staff,admin');
     });
 
@@ -58,5 +59,4 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/{purchaseRequest}/approve', [ApprovalController::class, 'approve']);
             Route::post('/{purchaseRequest}/reject', [ApprovalController::class, 'reject']);
         });
-
 });

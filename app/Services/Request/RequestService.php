@@ -7,6 +7,7 @@ namespace App\Services\Request;
 use App\Enums\RequestStatusEnum;
 use App\Enums\UserRoleEnum;
 use App\Models\Request as PurchaseRequest;
+use App\Models\RequestActivity;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -28,7 +29,7 @@ class RequestService
 
             $requestNumber = $this->generateRequestNumber();
 
-            return PurchaseRequest::query()->create([
+            $request = PurchaseRequest::query()->create([
                 'request_number' => $requestNumber,
                 'user_id' => $user->id,
                 'department_id' => $departmentId,
@@ -39,6 +40,16 @@ class RequestService
                 'submitted_at' => null,
                 'completed_at' => null,
             ]);
+
+            RequestActivity::query()->create([
+                'request_id' => $request->id,
+                'actor_id' => $user->id,
+                'action' => 'request_created',
+                'description' => 'Request created',
+                'meta' => null,
+            ]);
+
+            return $request;
         });
     }
 
@@ -55,7 +66,7 @@ class RequestService
 
     public function showForUser(User $user, PurchaseRequest $request): PurchaseRequest
     {
-        if ($user->role !== UserRoleEnum::ADMIN && $request->user_id !== $user->id) {
+        if (! $this->canAccessRequest($user, $request)) {
             abort(response()->json([
                 'success' => false,
                 'message' => 'Unauthorized.',
@@ -77,13 +88,7 @@ class RequestService
                 ->orderBy('created_at'),
         ]);
 
-        $isOwner = $request->user_id === $user->id;
-        $isAdmin = $user->role === UserRoleEnum::ADMIN;
-        $isAssignedApprover = $request->approvals->contains(
-            static fn ($approval): bool => $approval->approver_id === $user->id
-        );
-
-        if (! $isOwner && ! $isAdmin && ! $isAssignedApprover) {
+        if (! $this->canAccessRequest($user, $request)) {
             throw new AuthorizationException('Unauthorized.');
         }
 
@@ -100,6 +105,47 @@ class RequestService
                 'approved_at' => $approval->approved_at?->toISOString(),
             ])->values()->all(),
         ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function activitiesForUser(User $user, PurchaseRequest $request): array
+    {
+        $request->load([
+            'activities' => static fn ($query) => $query
+                ->with('actor')
+                ->orderBy('created_at'),
+        ]);
+
+        if (! $this->canAccessRequest($user, $request)) {
+            throw new AuthorizationException('Unauthorized.');
+        }
+
+        return $request->activities->map(static fn ($activity): array => [
+            'id' => $activity->id,
+            'request_id' => $activity->request_id,
+            'actor_id' => $activity->actor_id,
+            'action' => $activity->action,
+            'description' => $activity->description,
+            'meta' => $activity->meta,
+            'created_at' => $activity->created_at?->toISOString(),
+        ])->values()->all();
+    }
+
+    private function canAccessRequest(User $user, PurchaseRequest $request): bool
+    {
+        if ($user->role === UserRoleEnum::ADMIN || $request->user_id === $user->id) {
+            return true;
+        }
+
+        if (! $request->relationLoaded('approvals')) {
+            $request->load('approvals');
+        }
+
+        return $request->approvals->contains(
+            static fn ($approval): bool => $approval->approver_id === $user->id
+        );
     }
 
     private function generateRequestNumber(): string

@@ -9,6 +9,7 @@ use App\Enums\RequestStatusEnum;
 use App\Enums\UserRoleEnum;
 use App\Models\Approval;
 use App\Models\Request as PurchaseRequest;
+use App\Models\RequestActivity;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -85,6 +86,16 @@ class RequestSubmissionService
                     'approved_at' => null,
                 ]);
             }
+
+            RequestActivity::query()->create([
+                'request_id' => $request->id,
+                'actor_id' => $actor->id,
+                'action' => 'request_submitted',
+                'description' => 'Request submitted',
+                'meta' => [
+                    'current_level' => 1,
+                ],
+            ]);
 
             return $request->fresh();
         });

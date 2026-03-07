@@ -9,6 +9,7 @@ use App\Enums\RequestStatusEnum;
 use App\Enums\UserRoleEnum;
 use App\Models\Approval;
 use App\Models\Request as PurchaseRequest;
+use App\Models\RequestActivity;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -73,6 +74,17 @@ class ApprovalActionService
                 ]);
             }
 
+            RequestActivity::query()->create([
+                'request_id' => $request->id,
+                'actor_id' => $actor->id,
+                'action' => 'request_approved',
+                'description' => sprintf('Request approved at level %d', $approval->level),
+                'meta' => [
+                    'level' => $approval->level,
+                    'approver_id' => $actor->id,
+                ],
+            ]);
+
             return $request->fresh(['approvals']);
         });
     }
@@ -100,6 +112,18 @@ class ApprovalActionService
                 'status' => RequestStatusEnum::REJECTED,
                 'current_level' => $approval->level,
                 'completed_at' => now(),
+            ]);
+
+            RequestActivity::query()->create([
+                'request_id' => $request->id,
+                'actor_id' => $actor->id,
+                'action' => 'request_rejected',
+                'description' => sprintf('Request rejected at level %d', $approval->level),
+                'meta' => [
+                    'level' => $approval->level,
+                    'approver_id' => $actor->id,
+                    'reason' => $reason,
+                ],
             ]);
 
             return $request->fresh(['approvals']);

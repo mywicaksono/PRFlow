@@ -123,4 +123,27 @@ class RequestController extends Controller
             'data' => $history,
         ]);
     }
+
+    public function activities(Request $request, int $id): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $purchaseRequest = PurchaseRequest::query()->findOrFail($id);
+
+        try {
+            $activities = $this->requestService->activitiesForUser($user, $purchaseRequest);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request activities fetched successfully.',
+            'data' => $activities,
+        ]);
+    }
 }
