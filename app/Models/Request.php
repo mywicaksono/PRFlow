@@ -46,14 +46,6 @@ class Request extends Model
 
     public function activities(): HasMany
     {
-        return $this->hasMany(RequestActivity::class)
-            ->orderBy('created_at');
-    }
-
-
-    public function attachments(): HasMany
-    {
-        return $this->hasMany(RequestAttachment::class)
-            ->orderByDesc('id');
+        return $this->hasMany(RequestActivity::class);
     }
 }
