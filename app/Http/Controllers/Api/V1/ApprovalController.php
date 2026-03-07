@@ -9,8 +9,10 @@ use App\Http\Requests\Api\V1\Approval\RejectApprovalRequest;
 use App\Models\Request as PurchaseRequest;
 use App\Models\User;
 use App\Services\Approval\ApprovalActionService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ApprovalController extends Controller
 {
@@ -36,7 +38,20 @@ class ApprovalController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $updated = $this->approvalActionService->approve($user, $purchaseRequest);
+        try {
+            $updated = $this->approvalActionService->approve($user, $purchaseRequest);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -50,11 +65,24 @@ class ApprovalController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $updated = $this->approvalActionService->reject(
-            $user,
-            $purchaseRequest,
-            $request->string('reason')->toString()
-        );
+        try {
+            $updated = $this->approvalActionService->reject(
+                $user,
+                $purchaseRequest,
+                $request->string('reason')->toString()
+            );
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,

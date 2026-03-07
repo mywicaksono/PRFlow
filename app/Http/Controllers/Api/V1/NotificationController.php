@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Notification\RequestNotificationService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,7 +35,14 @@ class NotificationController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $notification = $this->requestNotificationService->markAsRead($user, $id);
+        try {
+            $notification = $this->requestNotificationService->markAsRead($user, $id);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,

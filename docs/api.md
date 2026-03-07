@@ -175,32 +175,6 @@ Base URL: `/api/v1`
 
 ---
 
-
-## Request Comments
-
-### GET `/requests/{id}/comments`
-- Auth: `auth:sanctum`
-- Roles: owner, assigned approver, admin
-- Returns comments ordered by `created_at` ascending
-
-### POST `/requests/{id}/comments`
-- Auth: `auth:sanctum`
-- Roles: owner, assigned approver, admin
-- Payload:
-
-```json
-{
-  "comment": "Please attach quotation for this item."
-}
-```
-
-- Validation: `comment` required, string, max 1000
-- Side effects:
-  - create activity `request_comment_added`
-  - notify request owner and current approver (excluding comment author)
-
----
-
 ## Attachments
 
 ### GET `/requests/{id}/attachments`
@@ -300,9 +274,3 @@ Base URL: `/api/v1`
 - Intermediate approval: notify next approver
 - Final approval: notify request owner
 - Reject: notify request owner
-
-
-### Comment behavior
-- Comment can be added by request owner, assigned approver, or admin
-- On comment creation, activity log `request_comment_added` is created
-- Notification recipients: request owner and current approver, excluding comment author

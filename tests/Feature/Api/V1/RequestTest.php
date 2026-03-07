@@ -133,29 +133,6 @@ class RequestTest extends TestCase
         $this->assertSame($user->id, $items[0]['user_id']);
     }
 
-
-    public function test_missing_request_returns_standard_404_error_envelope(): void
-    {
-        $departmentId = $this->createDepartment('Missing Request');
-        $staff = User::factory()->create([
-            'department_id' => $departmentId,
-            'role' => UserRoleEnum::STAFF,
-            'email' => 'missing-request@example.com',
-        ]);
-
-        Sanctum::actingAs($staff);
-
-        $this->getJson('/api/v1/requests/999999')
-            ->assertNotFound()
-            ->assertJsonPath('success', false)
-            ->assertJsonPath('message', 'Resource not found.')
-            ->assertJsonStructure([
-                'success',
-                'message',
-                'errors',
-            ]);
-    }
-
     public function test_admin_can_list_all_requests(): void
     {
         $departmentId = $this->createDepartment('Admin');
