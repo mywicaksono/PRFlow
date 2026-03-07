@@ -4,6 +4,10 @@ use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,5 +22,53 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $jsonError = static function (string $message, int $status, mixed $errors = null): JsonResponse {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+                'errors' => $errors,
+            ], $status);
+        };
+
+        $expectsJson = static fn (Request $request): bool => $request->is('api/*') || $request->expectsJson();
+
+        $exceptions->render(function (ValidationException $exception, Request $request) use ($jsonError, $expectsJson): ?JsonResponse {
+            if (! $expectsJson($request)) {
+                return null;
+            }
+
+            return $jsonError('Validation failed.', 422, $exception->errors());
+        });
+
+        $exceptions->render(function (AuthenticationException $exception, Request $request) use ($jsonError, $expectsJson): ?JsonResponse {
+            if (! $expectsJson($request)) {
+                return null;
+            }
+
+            return $jsonError('Unauthenticated.', 401);
+        });
+
+        $exceptions->render(function (AuthorizationException $exception, Request $request) use ($jsonError, $expectsJson): ?JsonResponse {
+            if (! $expectsJson($request)) {
+                return null;
+            }
+
+            return $jsonError('Unauthorized.', 403);
+        });
+
+        $exceptions->render(function (ModelNotFoundException $exception, Request $request) use ($jsonError, $expectsJson): ?JsonResponse {
+            if (! $expectsJson($request)) {
+                return null;
+            }
+
+            return $jsonError('Resource not found.', 404);
+        });
+
+        $exceptions->render(function (NotFoundHttpException $exception, Request $request) use ($jsonError, $expectsJson): ?JsonResponse {
+            if (! $expectsJson($request)) {
+                return null;
+            }
+
+            return $jsonError('Resource not found.', 404);
+        });
     })->create();
