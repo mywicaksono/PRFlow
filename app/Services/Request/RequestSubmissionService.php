@@ -11,18 +11,12 @@ use App\Models\Approval;
 use App\Models\Request as PurchaseRequest;
 use App\Models\RequestActivity;
 use App\Models\User;
-use App\Services\Notification\RequestNotificationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class RequestSubmissionService
 {
-    public function __construct(
-        private readonly RequestNotificationService $requestNotificationService
-    ) {
-    }
-
     public function submit(User $actor, PurchaseRequest $request): PurchaseRequest
     {
         return DB::transaction(function () use ($actor, $request): PurchaseRequest {
@@ -103,11 +97,7 @@ class RequestSubmissionService
                 ],
             ]);
 
-            $submittedRequest = $request->fresh(['approvals']);
-
-            $this->requestNotificationService->notifySubmitted($submittedRequest);
-
-            return $submittedRequest;
+            return $request->fresh();
         });
     }
 

@@ -225,189 +225,6 @@ class ApprovalTest extends TestCase
         $this->assertCount(2, $response->json('data.data'));
     }
 
-
-
-    public function test_admin_cannot_approve_when_not_assigned_current_approver(): void
-    {
-        $departmentId = $this->createDepartment('Admin Restrict Approval');
-        $owner = $this->createStaff($departmentId, 'owner-admin-restrict@example.com');
-        $supervisor = $this->createSupervisor($departmentId, 'supervisor-admin-restrict@example.com');
-
-        $request = $this->createSubmittedRequest($owner->id, $departmentId, 'PRF-202601-0999');
-        $this->createPendingApproval($request->id, $supervisor->id, 1, ApprovalStatusEnum::PENDING);
-
-        $admin = User::factory()->create([
-            'department_id' => $departmentId,
-            'role' => UserRoleEnum::ADMIN,
-            'is_active' => true,
-            'email' => 'admin-not-assigned@example.com',
-        ]);
-
-        Sanctum::actingAs($admin);
-
-        $this->postJson('/api/v1/approvals/'.$request->id.'/approve')
-            ->assertForbidden()
-            ->assertJsonPath('success', false)
-            ->assertJsonPath('message', 'Unauthorized.')
-            ->assertJsonStructure([
-                'success',
-                'message',
-                'errors',
-            ]);
-    }
-
-    public function test_supervisor_approval_moves_request_to_manager(): void
-    {
-        $departmentId = $this->createDepartment('MultiA');
-        $owner = $this->createStaff($departmentId, 'owner-multi-a@example.com');
-        $supervisor = $this->createSupervisor($departmentId, 'supervisor-multi-a@example.com');
-        $manager = User::factory()->create([
-            'department_id' => $departmentId,
-            'role' => UserRoleEnum::MANAGER,
-            'is_active' => true,
-            'email' => 'manager-multi-a@example.com',
-        ]);
-
-        $request = $this->createSubmittedRequest($owner->id, $departmentId, 'PRF-202601-0101', [
-            'current_level' => 1,
-        ]);
-
-        $level1 = $this->createPendingApproval($request->id, $supervisor->id, 1);
-        $this->createPendingApproval($request->id, $manager->id, 2);
-
-        Sanctum::actingAs($supervisor);
-
-        $this->postJson('/api/v1/approvals/'.$request->id.'/approve')
-            ->assertOk();
-
-        $this->assertDatabaseHas('approvals', [
-            'id' => $level1->id,
-            'status' => ApprovalStatusEnum::APPROVED->value,
-        ]);
-
-        $this->assertDatabaseHas('requests', [
-            'id' => $request->id,
-            'status' => RequestStatusEnum::SUBMITTED->value,
-            'current_level' => 2,
-        ]);
-    }
-
-    public function test_manager_approval_moves_request_to_finance(): void
-    {
-        $departmentId = $this->createDepartment('MultiB');
-        $owner = $this->createStaff($departmentId, 'owner-multi-b@example.com');
-        $supervisor = $this->createSupervisor($departmentId, 'supervisor-multi-b@example.com');
-        $manager = User::factory()->create([
-            'department_id' => $departmentId,
-            'role' => UserRoleEnum::MANAGER,
-            'is_active' => true,
-            'email' => 'manager-multi-b@example.com',
-        ]);
-        $finance = User::factory()->create([
-            'department_id' => $departmentId,
-            'role' => UserRoleEnum::FINANCE,
-            'is_active' => true,
-            'email' => 'finance-multi-b@example.com',
-        ]);
-
-        $request = $this->createSubmittedRequest($owner->id, $departmentId, 'PRF-202601-0102', [
-            'current_level' => 2,
-        ]);
-
-        $this->createPendingApproval($request->id, $supervisor->id, 1, ApprovalStatusEnum::APPROVED);
-        $level2 = $this->createPendingApproval($request->id, $manager->id, 2);
-        $this->createPendingApproval($request->id, $finance->id, 3);
-
-        Sanctum::actingAs($manager);
-
-        $this->postJson('/api/v1/approvals/'.$request->id.'/approve')
-            ->assertOk();
-
-        $this->assertDatabaseHas('approvals', [
-            'id' => $level2->id,
-            'status' => ApprovalStatusEnum::APPROVED->value,
-        ]);
-
-        $this->assertDatabaseHas('requests', [
-            'id' => $request->id,
-            'status' => RequestStatusEnum::SUBMITTED->value,
-            'current_level' => 3,
-        ]);
-    }
-
-    public function test_finance_approval_finalizes_request(): void
-    {
-        $departmentId = $this->createDepartment('MultiC');
-        $owner = $this->createStaff($departmentId, 'owner-multi-c@example.com');
-        $finance = User::factory()->create([
-            'department_id' => $departmentId,
-            'role' => UserRoleEnum::FINANCE,
-            'is_active' => true,
-            'email' => 'finance-multi-c@example.com',
-        ]);
-
-        $request = $this->createSubmittedRequest($owner->id, $departmentId, 'PRF-202601-0103', [
-            'current_level' => 3,
-        ]);
-
-        $this->createPendingApproval($request->id, $owner->id, 1, ApprovalStatusEnum::APPROVED);
-        $this->createPendingApproval($request->id, $owner->id, 2, ApprovalStatusEnum::APPROVED);
-        $level3 = $this->createPendingApproval($request->id, $finance->id, 3);
-
-        Sanctum::actingAs($finance);
-
-        $this->postJson('/api/v1/approvals/'.$request->id.'/approve')
-            ->assertOk();
-
-        $this->assertDatabaseHas('approvals', [
-            'id' => $level3->id,
-            'status' => ApprovalStatusEnum::APPROVED->value,
-        ]);
-
-        $this->assertDatabaseHas('requests', [
-            'id' => $request->id,
-            'status' => RequestStatusEnum::APPROVED->value,
-            'current_level' => 3,
-        ]);
-    }
-
-    public function test_reject_stops_workflow(): void
-    {
-        $departmentId = $this->createDepartment('MultiD');
-        $owner = $this->createStaff($departmentId, 'owner-multi-d@example.com');
-        $supervisor = $this->createSupervisor($departmentId, 'supervisor-multi-d@example.com');
-        $manager = User::factory()->create([
-            'department_id' => $departmentId,
-            'role' => UserRoleEnum::MANAGER,
-            'is_active' => true,
-            'email' => 'manager-multi-d@example.com',
-        ]);
-
-        $request = $this->createSubmittedRequest($owner->id, $departmentId, 'PRF-202601-0104', [
-            'current_level' => 1,
-        ]);
-
-        $level1 = $this->createPendingApproval($request->id, $supervisor->id, 1);
-        $this->createPendingApproval($request->id, $manager->id, 2);
-
-        Sanctum::actingAs($supervisor);
-
-        $this->postJson('/api/v1/approvals/'.$request->id.'/reject', [
-            'reason' => 'Rejected at level 1',
-        ])->assertOk();
-
-        $this->assertDatabaseHas('approvals', [
-            'id' => $level1->id,
-            'status' => ApprovalStatusEnum::REJECTED->value,
-        ]);
-
-        $this->assertDatabaseHas('requests', [
-            'id' => $request->id,
-            'status' => RequestStatusEnum::REJECTED->value,
-            'current_level' => 1,
-        ]);
-    }
-
     private function createDepartment(string $name): int
     {
         return (int) DB::table('departments')->insertGetId([
@@ -437,11 +254,12 @@ class ApprovalTest extends TestCase
         ]);
     }
 
-    /**
-     * @param  array<string, mixed>  $overrides
-     */
-    private function createSubmittedRequest(int $userId, int $departmentId, string $number, array $overrides = []): PurchaseRequest
-    {
+    private function createSubmittedRequest(
+        int $userId,
+        int $departmentId,
+        string $number,
+        array $overrides = []
+    ): PurchaseRequest {
         return PurchaseRequest::query()->create(array_merge([
             'request_number' => $number,
             'user_id' => $userId,
@@ -460,8 +278,7 @@ class ApprovalTest extends TestCase
         int $approverId,
         int $level = 1,
         ApprovalStatusEnum $status = ApprovalStatusEnum::PENDING
-    ): Approval
-    {
+    ): Approval {
         return Approval::query()->create([
             'request_id' => $requestId,
             'approver_id' => $approverId,

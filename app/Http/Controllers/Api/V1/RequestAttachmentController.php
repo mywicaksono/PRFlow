@@ -10,8 +10,10 @@ use App\Models\Request as PurchaseRequest;
 use App\Models\RequestAttachment;
 use App\Models\User;
 use App\Services\Request\RequestAttachmentService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class RequestAttachmentController extends Controller
 {
@@ -27,7 +29,14 @@ class RequestAttachmentController extends Controller
 
         $purchaseRequest = PurchaseRequest::query()->findOrFail($id);
 
-        $attachments = $this->requestAttachmentService->listForUser($user, $purchaseRequest);
+        try {
+            $attachments = $this->requestAttachmentService->listForUser($user, $purchaseRequest);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,
@@ -43,11 +52,24 @@ class RequestAttachmentController extends Controller
 
         $purchaseRequest = PurchaseRequest::query()->findOrFail($id);
 
-        $attachment = $this->requestAttachmentService->uploadForUser(
-            $user,
-            $purchaseRequest,
-            $request->file('file')
-        );
+        try {
+            $attachment = $this->requestAttachmentService->uploadForUser(
+                $user,
+                $purchaseRequest,
+                $request->file('file')
+            );
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
@@ -63,7 +85,20 @@ class RequestAttachmentController extends Controller
 
         $attachment = RequestAttachment::query()->findOrFail($id);
 
-        $this->requestAttachmentService->deleteForUser($user, $attachment);
+        try {
+            $this->requestAttachmentService->deleteForUser($user, $attachment);
+        } catch (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 403);
+        } catch (ValidationException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $exception->errors(),
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
