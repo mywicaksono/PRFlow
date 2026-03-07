@@ -43,4 +43,24 @@ class Request extends Model
     {
         return $this->hasMany(Approval::class);
     }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(RequestActivity::class)
+            ->orderBy('created_at');
+    }
+
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(RequestAttachment::class)
+            ->orderByDesc('id');
+    }
+
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(RequestComment::class)
+            ->orderBy('created_at');
+    }
 }
