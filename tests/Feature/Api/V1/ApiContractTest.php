@@ -25,6 +25,15 @@ class ApiContractTest extends TestCase
             ->assertJsonStructure(['success', 'message', 'errors']);
     }
 
+
+    public function test_unauthenticated_plain_api_request_does_not_require_login_route(): void
+    {
+        $this->get('/api/v1/requests')
+            ->assertStatus(401)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Unauthenticated.')
+            ->assertJsonStructure(['success', 'message', 'errors']);
+    }
     public function test_forbidden_endpoint_returns_standard_403_envelope(): void
     {
         $departmentId = $this->createDepartment('Contract Forbidden');
