@@ -47,7 +47,8 @@ export function LoginForm() {
   const onSubmit = handleSubmit(async (values) => {
     reset();
     await login(values);
-    navigate('/dashboard', { replace: true });
+    // Requests page is the first protected destination needed by current MVP flow.
+    navigate('/requests', { replace: true });
   });
 
   return (
