@@ -132,9 +132,37 @@ class RequestAttachmentTest extends TestCase
 
         $this->getJson('/api/v1/requests/'.$request->id.'/attachments')
             ->assertForbidden()
+<<<<<<< HEAD
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Unauthorized.')
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'errors',
+            ]);
+    }
+
+
+    public function test_missing_attachment_returns_standard_404_error_envelope(): void
+    {
+        $departmentId = $this->createDepartment('Attachment Missing');
+        $owner = $this->createUser($departmentId, UserRoleEnum::STAFF, 'attachment-missing@example.com');
+
+        Sanctum::actingAs($owner);
+
+        $this->deleteJson('/api/v1/attachments/999999')
+            ->assertNotFound()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Resource not found.')
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'errors',
+=======
             ->assertJson([
                 'success' => false,
                 'message' => 'Unauthorized.',
+>>>>>>> origin/main
             ]);
     }
 

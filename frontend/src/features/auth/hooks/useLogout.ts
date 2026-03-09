@@ -1,0 +1,13 @@
+import { useMutation } from '@tanstack/react-query';
+
+import { useAuth } from '@/features/auth/context/AuthContext';
+
+export function useLogout() {
+  const { logout } = useAuth();
+
+  return useMutation({
+    mutationFn: async () => {
+      await logout();
+    },
+  });
+}
