@@ -156,6 +156,7 @@ class RequestNotificationTest extends TestCase
         $this->assertSame($user->id, $items[0]['user_id']);
     }
 
+<<<<<<< HEAD
 
     public function test_missing_notification_returns_standard_404_error_envelope(): void
     {
@@ -175,6 +176,8 @@ class RequestNotificationTest extends TestCase
             ]);
     }
 
+=======
+>>>>>>> origin/main
     public function test_user_cannot_read_another_users_notification(): void
     {
         $departmentId = $this->createDepartment('Notif Read Unauthorized');
@@ -197,12 +200,18 @@ class RequestNotificationTest extends TestCase
 
         $this->postJson('/api/v1/notifications/'.$notification->id.'/read')
             ->assertForbidden()
+<<<<<<< HEAD
             ->assertJsonPath('success', false)
             ->assertJsonPath('message', 'Unauthorized.')
             ->assertJsonStructure([
                 'success',
                 'message',
                 'errors',
+=======
+            ->assertJson([
+                'success' => false,
+                'message' => 'Unauthorized.',
+>>>>>>> origin/main
             ]);
     }
 

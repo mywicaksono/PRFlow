@@ -133,6 +133,7 @@ class RequestTest extends TestCase
         $this->assertSame($user->id, $items[0]['user_id']);
     }
 
+<<<<<<< HEAD
 
     public function test_missing_request_returns_standard_404_error_envelope(): void
     {
@@ -156,6 +157,8 @@ class RequestTest extends TestCase
             ]);
     }
 
+=======
+>>>>>>> origin/main
     public function test_admin_can_list_all_requests(): void
     {
         $departmentId = $this->createDepartment('Admin');
@@ -282,6 +285,7 @@ class RequestTest extends TestCase
             ->assertJsonPath('success', true);
     }
 
+<<<<<<< HEAD
 
     public function test_admin_can_filter_by_department(): void
     {
@@ -590,6 +594,8 @@ class RequestTest extends TestCase
             ]);
     }
 
+=======
+>>>>>>> origin/main
     private function createDepartment(string $name): int
     {
         return (int) DB::table('departments')->insertGetId([

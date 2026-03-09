@@ -132,6 +132,7 @@ class RequestAttachmentTest extends TestCase
 
         $this->getJson('/api/v1/requests/'.$request->id.'/attachments')
             ->assertForbidden()
+<<<<<<< HEAD
             ->assertJsonPath('success', false)
             ->assertJsonPath('message', 'Unauthorized.')
             ->assertJsonStructure([
@@ -157,6 +158,11 @@ class RequestAttachmentTest extends TestCase
                 'success',
                 'message',
                 'errors',
+=======
+            ->assertJson([
+                'success' => false,
+                'message' => 'Unauthorized.',
+>>>>>>> origin/main
             ]);
     }
 

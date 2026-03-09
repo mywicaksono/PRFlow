@@ -11,7 +11,6 @@ use App\Models\Approval;
 use App\Models\Request as PurchaseRequest;
 use App\Models\RequestActivity;
 use App\Models\User;
-use App\Services\Notification\RequestNotificationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -19,11 +18,6 @@ use Illuminate\Validation\ValidationException;
 
 class ApprovalActionService
 {
-    public function __construct(
-        private readonly RequestNotificationService $requestNotificationService
-    ) {
-    }
-
     public function pendingForUser(User $user): LengthAwarePaginator
     {
         $approvalQuery = Approval::query()
@@ -91,11 +85,7 @@ class ApprovalActionService
                 ],
             ]);
 
-            $updatedRequest = $request->fresh(['approvals']);
-
-            $this->requestNotificationService->notifyApproved($updatedRequest, $actor, $approval->level);
-
-            return $updatedRequest;
+            return $request->fresh(['approvals']);
         });
     }
 
@@ -136,22 +126,22 @@ class ApprovalActionService
                 ],
             ]);
 
-            $updatedRequest = $request->fresh(['approvals']);
-
-            $this->requestNotificationService->notifyRejected($updatedRequest, $actor, $approval->level, $reason);
-
-            return $updatedRequest;
+            return $request->fresh(['approvals']);
         });
     }
 
     private function resolvePendingApproval(User $actor, PurchaseRequest $request): Approval
     {
-        $approval = Approval::query()
+        $approvalQuery = Approval::query()
             ->where('request_id', $request->id)
-            ->where('approver_id', $actor->id)
             ->where('status', ApprovalStatusEnum::PENDING)
-            ->where('level', $request->current_level)
-            ->first();
+            ->where('level', $request->current_level);
+
+        if ($actor->role !== UserRoleEnum::ADMIN) {
+            $approvalQuery->where('approver_id', $actor->id);
+        }
+
+        $approval = $approvalQuery->first();
 
         if ($approval === null) {
             throw new AuthorizationException('Unauthorized.');
